@@ -1,4 +1,5 @@
-# Section 7b for triage_system.ipynb: paste this whole file into one code cell after section 7a.
+# Section 7b for triage_system.ipynb: loaded by the 7b cell with `%run -i section7b_agent.py`, after section 7a.
+# It is not an importable module: it uses json and the section 7a tool functions from the notebook's namespace.
 # Ported from P6 (agentic_system.ipynb) with the four fixes proposed in P6's report.
 
 ## 7b. The agent: P6's BaseAgent / ReliabilityAgent with the four fixes from P6's report
