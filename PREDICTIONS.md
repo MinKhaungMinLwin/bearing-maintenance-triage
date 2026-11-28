@@ -196,4 +196,4 @@ P2, P3, P4, P6, P8, P9 and P10 are reported prediction by prediction as right or
 
 ---
 
-*Revisions before test 1:* `c0d59d0` first draft; `a0bcecf` tightened wording (P1, P3, P4, P6, P8, P9, P10, section 5); `[new hash]` metric names and frozen commits. No prediction changed direction.
+*Revisions before test 1:* `c0d59d0` first draft; `a0bcecf` tightened wording (P1, P3, P4, P6, P8, P9, P10, section 5); `b911428` metric names and frozen commits. No prediction changed direction.
