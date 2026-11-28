@@ -8,7 +8,7 @@ So far I've only looked at test 1's file names and the readme. No spectra, score
 
 ## 1. What is frozen
 
-Everything below stays exactly as it is in commit **`783a45b`** on `dev` (the notebook `triage_system.ipynb` plus `section7b_agent.py`). The only uncommitted change in the working tree is the `RUN_OFFSCOPE` flag in section 9, which turns off a test 2 API call and has no effect on the detector, the router or the agent. I'll commit this file on its own, and the result write-up will name that commit.
+The frozen version is **`bc0664b`** on `dev`, which adds section 10 (the episode table), plus **`a0bcecf`**, this file's revision. Together they cover the notebook `triage_system.ipynb` and `section7b_agent.py`. Sections 11–13 are committed before they are run.
 
 **Detector (sections 4c and 5c of the notebook).**
 - VAE on the raw score, from P5, with the same architecture and training (60 epochs, latent 8).
@@ -80,21 +80,21 @@ Test 1 has no P6 result to take a cut-off from, so the cut-off below comes from 
 Each prediction states the metric, what I expect, and what proves it wrong. Confidence is how sure I am now: high, medium or low.
 
 **P1. Order of the relative alarms.**
-- *Metric:* `first_6h_alarm` per bearing, for the relative VAE detector, in each of seeds 0, 1 and 2.
+- *Metric:* the onset of the first sustained episode in `episodes()` (section 10), per bearing, for the relative VAE detector, in each of seeds 0, 1 and 2.
 - *Expect:* at least one of B3 and B4 gets a sustained relative alarm before either B1 or B2 does (or B1 and B2 never get one), in **all three seeds**.
 - *Why:* B3's median of the other three bearings is taken over B1, B2 and B4, so it is still the middle of two healthy bearings and one failing one. A median of three can tolerate one other failing bearing.
-- *Wrong if:* in any seed, B1 or B2 gets a sustained relative alarm before both B3 and B4.
+- *Wrong if:* in any seed, B1 or B2 gets a sustained relative alarm before both B3 and B4, or neither B3 nor B4 gets one at all. A run where no bearing ever gets a sustained relative alarm counts as wrong, not as holding.
 - *Confidence:* medium. On test 3, Variant 4 never alarmed on B3 and had 214 false episodes.
 
 **P2. Both failing bearings show up as relative alarms.**
-- *Metric:* whether B3 and B4 each have a `first_6h_alarm` (relative, seed 0).
+- *Metric:* whether B3 and B4 each have an onset of a first sustained episode in `episodes()` (section 10) (relative, seed 0).
 - *Expect:* both do, at some point in the run, including the end-stage window.
 - *Wrong if:* either has none.
 - *Confidence:* low. If the two defects grow at about the same time, each one raises the median the other is compared with.
 
 **P3. The absolute view drifts on the healthy bearings.**
 - *Metric:* sustained absolute alarms on B1 and B2 in the early window (VAE, seed 0).
-- *Expect:* at least one of B1 and B2 has one, probably soon after the 6-day gap ends on Oct 29.
+- *Expect:* at least one of B1 and B2 has one. My guess is that it comes soon after the 6-day gap ends on Oct 29, but the timing isn't scored.
 - *Why:* I expect the rig to look different after the restart, just as test 3 drifted on all four bearings.
 - *Wrong if:* neither B1 nor B2 has a sustained absolute alarm before the end-stage window.
 - This is a prediction that a known weakness will show up again, not a hope.
@@ -104,6 +104,7 @@ Each prediction states the metric, what I expect, and what proves it wrong. Conf
 - *Metric:* false sustained absolute episodes on B1 and B2 in the early window, VAE raw against distance with the 1-hour median, seed 0.
 - *Expect:* the VAE has **at least as many** as the distance baseline, as it did on tests 2 and 3. So the VAE doesn't clearly earn its place on false alarms.
 - *Wrong if:* the VAE has fewer.
+- *A 0–0 tie* means neither detector raised a false alarm. That isn't a win for my prediction, so I'll record it as not scorable and report it as both being clean.
 - *Confidence:* medium.
 
 **P5. The agent warns early on a failing bearing.**
@@ -118,6 +119,7 @@ Each prediction states the metric, what I expect, and what proves it wrong. Conf
 - *Expect:* the correct name (`inner_race` on B3, `rolling_element` on B4) in **fewer than half** of those decisions, with `unknown` or `none` the most common label.
 - *Why:* on test 2 the agent named B1's outer-race fault in 5 of its 20 decisions on B1. Of the other 15, 6 were `unknown` and 9 were `none`. Inner-race and rolling-element defects are usually harder to see in the envelope spectrum than outer-race ones, so I don't expect better.
 - *Wrong if:* the correct name appears in half or more of them.
+- *Not scorable* if the agent makes no alert or escalate decisions on B3 or B4. That case is covered by P5 and section 5.
 - I'll also count wrong specific names, such as `outer_race` on B3, because a confident wrong name is worse than `unknown`.
 - *Confidence:* medium.
 
@@ -131,20 +133,20 @@ Each prediction states the metric, what I expect, and what proves it wrong. Conf
 **P8. The agent is a little stricter than the rules, and never milder on a failing bearing.**
 - *Metric:* the share of decisions that are stricter than `rule_baseline`, and the count of milder ones.
 - *Expect:* stricter in **5–15%** of decisions, mostly on B3 and B4 recheck wake-ups (alert → escalate). Milder in **zero** decisions on B3 or B4 where the rules say alert or escalate.
-- *Why:* on test 2 the agent was stricter in 7 of 66 decisions (11%), milder in none, and all 7 were B1 rechecks where it escalated past the rules' alert.
-- *Wrong if:* stricter is above 25%, or any decision on B3 or B4 is milder than an alert or escalate from the rules. The second one matters more, because it's the unsafe direction.
+- *Why:* on test 2 the agent was stricter in 7 of 66 decisions (11%), milder in none, and all 7 were B1 rechecks where it escalated past the rules' alert. Six of the seven rationales cite both alarms plus the previous status in memory, and the seventh cites the absolute alarm plus outer-race evidence. None of them cites rapid growth.
+- *Wrong if:* stricter is below 5% or above 15%, or any decision on B3 or B4 is milder than an alert or escalate from the rules. The second one matters more, because it's the unsafe direction.
 - *Confidence:* medium.
 
 **P9. The agent's mechanics hold up.**
 - *Metric:* fallbacks (step limit), forced decisions, and decisions marked `agent_unverified`.
-- *Expect:* zero fallbacks and at most one unverified decision. On test 2 all three counts were zero.
-- *Wrong if:* there are any fallbacks, or two or more unverified decisions.
+- *Expect:* zero fallbacks, zero forced decisions, and at most one unverified decision. On test 2 all three counts were zero.
+- *Wrong if:* there are any fallbacks, any forced decisions, or two or more unverified decisions.
 - *Confidence:* high.
 
 **P10. Seed spread.**
-- *Metric:* the min–max of `first_6h_alarm` across seeds 0–2, per bearing, for the relative VAE.
+- *Metric:* the min–max, across seeds 0–2, of the onset of the first sustained episode in `episodes()` (section 10), per bearing, for the relative VAE.
 - *Expect:* within **6 hours** for B3 and B4, and the P1 verdict the same in all three seeds.
-- *Wrong if:* the spread is larger than that, or P1 holds in some seeds and not others. On test 2, healthy bearings moved by up to 5 hours.
+- *Wrong if:* the spread is larger than that, P1 holds in some seeds and not others, or B3 or B4 has a sustained relative alarm in some seeds but none in another. On test 2, healthy bearings moved by up to 5 hours.
 - *Confidence:* medium.
 
 ---
@@ -169,6 +171,8 @@ These are set now, so the result can't be reframed afterwards. The question is t
 - There are 3 or more false alert episodes on B1 or B2 in the early window.
 - An alert on B1 or B2 comes **before** the first alert on B3 or B4. That's the same reasoning as test 3: a warning you can't tell from the false ones isn't a catch.
 
+Anything that is not success or partial success is failure.
+
 P2, P3, P4, P6, P8, P9 and P10 are reported prediction by prediction as right or wrong, but they don't change the verdict above. Whatever the verdict, no setting changes after test 1. If it fails, the write-up says why, and that is where the project ends. Nothing gets re-tuned on test 1.
 
 ---
@@ -189,3 +193,7 @@ P2, P3, P4, P6, P8, P9 and P10 are reported prediction by prediction as right or
    - Temperature 0 isn't perfectly repeatable, so a second run could differ. That's another reason to run it only once.
    - If the run breaks partway through (an API error, not a result I dislike), it's restarted from the start, and the restart is noted.
 6. **Write-up:** a results section that goes through P1–P10 one at a time with each metric's value, marks each one right or wrong, and then gives the section 5 verdict.
+
+---
+
+*Revisions before test 1:* `c0d59d0` first draft; `a0bcecf` tightened wording (P1, P3, P4, P6, P8, P9, P10, section 5); `[new hash]` metric names and frozen commits. No prediction changed direction.
